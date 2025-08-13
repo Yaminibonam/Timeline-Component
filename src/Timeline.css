@@ -36,7 +36,7 @@
 .type-btn .icon { font-size: 16px; }
 .type-btn .txt { font-size: 13px; opacity: 0.9; }
 .type-btn.active {
-  box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+  box-shadow: 0 4px 14px rgba(143, 140, 140, 0.6);
   transform: translateY(-1px);
   border-color: rgba(255,255,255,0.12);
 }
@@ -93,7 +93,7 @@
 }
 .tick.major {
   height: 28px;
-  background: rgba(255,255,255,0.12);
+  background: linear-gradient(#2f3946, #222a36);
 }
 .tick .label {
   position: absolute;
@@ -168,6 +168,7 @@
 }
 
 .overlay {
+  z-index: 0;
   transition: all 0.1s ease-out;
   background-color: rgba(100, 100, 255, 0.2);
   border-radius: 6px;
@@ -197,9 +198,9 @@
 }
 
 .overlay.chapter {
-  background-color: rgba(209, 146, 91, 0.92);
+  background-color: rgba(216, 171, 132, 0.92);
 }
 
 .overlay.autoplay {
-  background-color: rgba(100, 100, 255, 0.621);
+  background-color: rgba(145, 145, 219, 0.621);
 }

@@ -1,74 +1,35 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import "./Timeline.css";
+import { fetchTable, saveRecord, deleteRecord } from "./api";
+import { secondsToMMSS } from "./utils";
+import Marker from "./Marker";
+import Overlay from "./Overlay";
+import Controls from "./Controls";
 
 const MARKER_TYPES = {
-    ad: { color: "#1777ff", label: "Ad", icon: "📢" },
-    skip: { color: "#8b5cf6", label: "Skip", icon: "⏭️" },
+  ad: { color: "#1777ff", label: "Ad", icon: "📢" },
+  skip: { color: "#8b5cf6", label: "Skip", icon: "⏭️" },
+  chapter: { color: "#888", label: "Chapter", icon: "📖" },
+  autoplay: { color: "#898686ff", label: "Autoplay", icon: "▶️" },
 };
-
-const API_BASE = "http://138.68.140.83:8080/yaminib";
-
-// ----------------- API Helpers -----------------
-async function fetchTable(tableName) {
-    const res = await fetch(`${API_BASE}/getTableData.jsp?tableName=${tableName}`);
-    if (!res.ok) throw new Error(`Failed to fetch ${tableName}`);
-    const json = await res.json();
-    if (json.error) throw new Error(json.error);
-    if (!Array.isArray(json.columns) || !Array.isArray(json.data)) return [];
-    
-    return json.data.map(row => {
-        const obj = {};
-        json.columns.forEach((colName, idx) => {
-            obj[colName] = row[idx];
-        });
-        return obj;
-    });
-}
-
-async function saveRecord(tableName, columns, values) {
-    // Send columns[] and values[] as arrays, matching backend JSP requirements
-    const params = new URLSearchParams();
-    params.append("tableName", tableName);
-    columns.forEach(c => params.append("columns[]", c));
-    values.forEach(v => params.append("values[]", v));
-    
-    const res = await fetch(`${API_BASE}/saveRecord.jsp`, {
-        method: "POST",
-        body: params
-    });
-    return res.json();
-}
-
-async function deleteRecord(tableName, fieldName, fieldValue) {
-    const params = new URLSearchParams();
-    params.append("tableName", tableName);
-    params.append("fieldName", fieldName);
-    params.append("fieldValue", fieldValue);
-    
-    const res = await fetch(`${API_BASE}/deleteRecord.jsp`, {
-        method: "POST",
-        body: params
-    });
-    return res.json();
-}
-
-// ----------------- Helper Functions -----------------
-function secondsToMMSS(seconds) {
-    const s = Math.max(0, Math.floor(seconds));
-    const mm = Math.floor(s / 60);
-    const ss = s % 60;
-    return `${mm.toString().padStart(2, "0")}:${ss.toString().padStart(2, "0")}`;
-}
 
 // ----------------- Timeline Component -----------------
 export default function Timeline({ timelineLength }) {
   // Use dynamic timeline length from prop
-  const timelineWidthSeconds = typeof timelineLength === 'number' ? timelineLength : 60 * 60 * 12 * 4;
+  const timelineWidthSeconds = typeof timelineLength === 'number' ? timelineLength : 60 * 60 * 5;
   const timelineRef = useRef(null);
   const rulerRef = useRef(null);
 
+  // Calculate initial pixelsPerSecond so timeline fits screen width
+  const getInitialPixelsPerSecond = () => {
+    if (typeof window !== 'undefined') {
+      const screenWidth = window.innerWidth - 64; // 64px padding estimate
+      return Math.max(screenWidth / timelineWidthSeconds, 1);
+    }
+    return 1;
+  };
 
-  const [pixelsPerSecond, setPixelsPerSecond] = useState(1);
+  const [pixelsPerSecond, setPixelsPerSecond] = useState(getInitialPixelsPerSecond);
   const [markers, setMarkers] = useState([]);
   const [overlays, setOverlays] = useState([]);
   const [selectedType, setSelectedType] = useState("ad");
@@ -77,6 +38,21 @@ export default function Timeline({ timelineLength }) {
   const [resizeOverlay, setResizeOverlay] = useState(null);
   const [overlayInput, setOverlayInput] = useState({ type: "chapter", start: "", end: "" });
   const [recentlyDragged, setRecentlyDragged] = useState(false);
+
+  // Always keep timeline at least screen width
+  const getMinPixelsPerSecond = () => {
+    if (typeof window !== 'undefined') {
+      const screenWidth = window.innerWidth - 64;
+      return screenWidth / timelineWidthSeconds;
+    }
+    return 1;
+  };
+
+  useEffect(() => {
+    // If video length changes, recalc zoom so timeline fits screen
+    const minPPS = getMinPixelsPerSecond();
+    setPixelsPerSecond(p => Math.max(p, minPPS));
+  }, [timelineLength]);
 
   const secondsToPx = s => Math.round(s * pixelsPerSecond);
   const pxToSeconds = px => px / pixelsPerSecond;
@@ -264,7 +240,10 @@ export default function Timeline({ timelineLength }) {
 
   // ----------------- Zoom & Delete -----------------
   const zoomIn = () => setPixelsPerSecond(p => Math.min(p*1.6, 5));
-  const zoomOut = () => setPixelsPerSecond(p => Math.max(p/1.6, 0.005));
+  const zoomOut = () => {
+    const minPPS = getMinPixelsPerSecond();
+    setPixelsPerSecond(p => Math.max(p/1.6, minPPS));
+  };
 
   const removeMarker = id => {
     setMarkers(prev => prev.filter(m => m.id !== id));
@@ -295,39 +274,33 @@ export default function Timeline({ timelineLength }) {
   })();
 
   // ----------------- Render -----------------
+  // Calculate timeline width so it never goes below screen width
+  const getTimelineWidthPx = () => {
+    if (typeof window !== 'undefined') {
+      const screenWidth = window.innerWidth - 64;
+      const px = secondsToPx(timelineWidthSeconds);
+      return Math.max(px, screenWidth);
+    }
+    return secondsToPx(timelineWidthSeconds);
+  };
+
   return (
     <div className="page">
-      <form onSubmit={handleAddOverlay} style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-        <select value={overlayInput.type} onChange={e=>setOverlayInput(o=>({...o,type:e.target.value}))} style={{width:120}}>
-          <option value="chapter">Chapter Overlay</option>
-          <option value="autoplay">Autoplay Overlay</option>
-        </select>
-        <input type="text" placeholder="Start (mm:ss)" value={overlayInput.start} onChange={e=>setOverlayInput(o=>({...o,start:e.target.value}))} style={{width:100}}/>
-        <input type="text" placeholder="End (mm:ss)" value={overlayInput.end} onChange={e=>setOverlayInput(o=>({...o,end:e.target.value}))} style={{width:100}}/>
-        <button type="submit" style={{ padding:"6px 14px", borderRadius:6, border:"none", background:"gold", color:"#333" }}>Add Overlay</button>
-      </form>
-
-      <div className="controls-row">
-        <div className="marker-buttons">
-          {Object.keys(MARKER_TYPES).map(k => (
-            <button key={k} className={`type-btn ${selectedType===k?"active":""}`} onClick={()=>setSelectedType(k)} title={MARKER_TYPES[k].label}>
-              <span className="icon">{MARKER_TYPES[k].icon}</span>
-              <span className="txt">{MARKER_TYPES[k].label}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="zoom-controls">
-          <button onClick={zoomOut}>➖</button>
-          <div className="zoom-value">{(pixelsPerSecond*3600).toFixed(0)} px / hr</div>
-          <button onClick={zoomIn}>➕</button>
-        </div>
-      </div>
-       <div className="ruler-wrapper" ref={timelineRef}>
+      <Controls
+        overlayInput={overlayInput}
+        setOverlayInput={setOverlayInput}
+        handleAddOverlay={handleAddOverlay}
+        selectedType={selectedType}
+        setSelectedType={setSelectedType}
+        zoomIn={zoomIn}
+        zoomOut={zoomOut}
+        pixelsPerSecond={pixelsPerSecond}
+      />
+      <div className="ruler-wrapper" ref={timelineRef}>
         <div
           className="ruler"
           ref={rulerRef}
-          style={{ width: secondsToPx(timelineWidthSeconds) }}
+          style={{ width: getTimelineWidthPx() }}
           onClick={onRulerClick}
         >
           <div className="ticks">
@@ -337,137 +310,56 @@ export default function Timeline({ timelineLength }) {
               </div>
             ))}
           </div>
-
           <div className="baseline" />
-
-          {overlays.map((ov, idx) => {
-            const color = MARKER_TYPES[ov.type]?.color || "#888";
-            const left = secondsToPx(ov.startSeconds);
-            const width = secondsToPx(ov.endSeconds - ov.startSeconds);
-            return (
-              <div
-                key={idx}
-                className={`overlay ${ov.type}`}
-                style={{
-                  position: "absolute",
-                  left,
-                  top: 0,
-                  width,
-                  height: 32,
-                  background: color + (ov.addedByForm ? "66" : "33"),
-                  border: `2px solid ${color}`,
-                  borderRadius: 6,
-                  zIndex: 0,
-                  cursor: "move",
-                  display: "flex",
-                  alignItems: "center",
-                  pointerEvents: "auto",
-                  userSelect: "none",
-                  outline: ov.addedByForm ? `2px solid ${color}` : undefined,
-                }}
-                title={`${ov.type}: ${secondsToMMSS(ov.startSeconds)} - ${secondsToMMSS(ov.endSeconds)}`}
-                onPointerDown={(e) => {
-                  if (e.button !== 0) return;
-                  e.stopPropagation();
-                  const offset = e.clientX - rulerRef.current.getBoundingClientRect().left - left;
-                  setDragOverlay({ idx, offset }); // ✅ Corrected here
-                }}
-              >
-                <div
-                  className="resize-handle left"
-                  style={{
-                    width: 8,
-                    height: 28,
-                    cursor: "ew-resize",
-                    position: "absolute",
-                    left: -4,
-                    top: 2,
-                    zIndex: 2,
-                    background: color + "55",
-                    borderRadius: 4,
-                  }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    setResizeOverlay({ idx, edge: "left" });
-                  }}
-                />
-                <span style={{ margin: "0 auto", fontWeight: 600, color }}>{ov.type}</span>
-                <div
-                  className="resize-handle right"
-                  style={{
-                    width: 8,
-                    height: 28,
-                    cursor: "ew-resize",
-                    position: "absolute",
-                    right: -4,
-                    top: 2,
-                    zIndex: 2,
-                    background: color + "55",
-                    borderRadius: 4,
-                  }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    setResizeOverlay({ idx, edge: "right" });
-                  }}
-                />
-                <div
-                  className="overlay-delete"
-                  style={{
-                    position: "absolute",
-                    right: 8,
-                    top: 4,
-                    cursor: "pointer",
-                    color: "#c00",
-                    fontWeight: 700,
-                    zIndex: 3,
-                  }}
-                  onClick={() => removeOverlay(idx)}
-                  title="Delete overlay"
-                >
-                  ✖
-                </div>
-              </div>
-            );
-          })}
-
+          {overlays.map((ov, idx) => (
+            <Overlay
+              key={ov.id || idx}
+              overlay={{
+                ...ov,
+                left: secondsToPx(ov.startSeconds),
+                width: secondsToPx(ov.endSeconds - ov.startSeconds),
+              }}
+              idx={idx}
+              onPointerDown={e => {
+                if (e.button !== 0) return;
+                e.stopPropagation();
+                const offset = e.clientX - rulerRef.current.getBoundingClientRect().left - secondsToPx(ov.startSeconds);
+                setDragOverlay({ idx, offset });
+              }}
+              onResizeLeft={e => {
+                e.stopPropagation();
+                setResizeOverlay({ idx, edge: "left" });
+              }}
+              onResizeRight={e => {
+                e.stopPropagation();
+                setResizeOverlay({ idx, edge: "right" });
+              }}
+              onDelete={() => removeOverlay(idx)}
+            />
+          ))}
           <div className="markers-layer">
-            {markers.map((m) => {
-              const left = secondsToPx(m.seconds);
-              const def = MARKER_TYPES[m.type] || MARKER_TYPES.ad;
-              return (
-                <div
-                  key={m.id}
-                  className="marker"
-                  style={{ left, cursor: "move" }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    if (e.button !== 0) return;
-                    const offset = e.clientX - rulerRef.current.getBoundingClientRect().left - left;
-                    setDraggingMarker({ id: m.id, offset });
-                  }}
-                >
-                  <div className="marker-pin" style={{ background: def.color }}>
-                    <span className="marker-icon">{def.icon}</span>
-                  </div>
-                  <div className="marker-time">{secondsToMMSS(m.seconds)}</div>
-                  <div
-                    className="marker-delete"
-                    style={{ position: "absolute", right: -10, top: -10, cursor: "pointer", color: "#c00", fontWeight: 700, zIndex: 3 }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeMarker(m.id);
-                    }}
-                    title="Delete marker"
-                  >
-                    ✖
-                  </div>
-                </div>
-              );
-            })}
+            {markers.map((m) => (
+              <Marker
+                key={m.id}
+                marker={{
+                  ...m,
+                  left: secondsToPx(m.seconds),
+                }}
+                onPointerDown={e => {
+                  e.stopPropagation();
+                  if (e.button !== 0) return;
+                  const offset = e.clientX - rulerRef.current.getBoundingClientRect().left - secondsToPx(m.seconds);
+                  setDraggingMarker({ id: m.id, offset });
+                }}
+                onDelete={e => {
+                  e.stopPropagation();
+                  removeMarker(m.id);
+                }}
+              />
+            ))}
           </div>
         </div>
       </div>
-
       <div className="hint">
         Click to add marker or overlay. Drag to move. Resize overlays by dragging the edges. Use the form above to add overlays for chapter/autoplay.
       </div>

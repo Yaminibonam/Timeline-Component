@@ -3,12 +3,12 @@ import TimelineComponent from "./Timeline";
 
 function App() {
   // Timeline length in seconds (default: 4 x 12 hours)
-  const [timelineLength, setTimelineLength] = useState(60 * 60 * 12 * 4);
+  const [timelineLength, setTimelineLength] = useState(60 * 60 * 5);
 
   // Example: UI to change timeline length (for future video integration)
   // You can remove this input later and set timelineLength from video duration
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <h1>My Timeline App</h1>
       <div style={{ marginBottom: 16 }}>
         <label>
@@ -23,6 +23,7 @@ function App() {
           />
         </label>
       </div>
+      <div style={{ flex: 1 }} />
       <TimelineComponent timelineLength={timelineLength} />
     </div>
   );
