@@ -14,7 +14,7 @@ const MARKER_TYPES = {
 };
 
 // ----------------- Timeline Component -----------------
-export default function Timeline({ timelineLength }) {
+export default function Timeline({ timelineLength, videoID }) {
   // Use dynamic timeline length from prop
   const timelineWidthSeconds = typeof timelineLength === 'number' ? timelineLength : 60 * 60 * 5;
   const timelineRef = useRef(null);
@@ -59,18 +59,19 @@ export default function Timeline({ timelineLength }) {
 
   // ----------------- Load markers & overlays -----------------
   useEffect(() => {
+    if (!videoID) return;
     (async () => {
       try {
         const markerRows = await fetchTable("markers");
         const overlayRows = await fetchTable("overlays");
 
-        setMarkers(markerRows.map(r => ({
+        setMarkers(markerRows.filter(r => r.videoID === videoID).map(r => ({
           id: r.id,
           seconds: Number(r.seconds),
           type: r.type
         })));
 
-        setOverlays(overlayRows.map(r => ({
+        setOverlays(overlayRows.filter(r => r.videoID === videoID).map(r => ({
           id: r.id,
           type: r.type,
           startSeconds: Number(r.startSeconds),
@@ -81,7 +82,7 @@ export default function Timeline({ timelineLength }) {
         console.error("Failed to load from API:", err);
       }
     })();
-  }, []);
+  }, [videoID]);
 
   // ----------------- Add Overlay -----------------
   const handleAddOverlay = (e) => {
@@ -89,10 +90,19 @@ export default function Timeline({ timelineLength }) {
     const { type, start, end } = overlayInput;
     const [sm, ss] = start.split(":").map(Number);
     const [em, es] = end.split(":").map(Number);
-    const startSec = sm * 60 + (ss || 0);
-    const endSec = em * 60 + (es || 0);
+    let startSec = sm * 60 + (ss || 0);
+    let endSec = em * 60 + (es || 0);
     if (type !== "chapter" && type !== "autoplay") return;
     if (isNaN(startSec) || isNaN(endSec) || startSec < 0 || endSec <= startSec) return;
+    // Prevent overlay from exceeding video length
+    if (endSec > timelineWidthSeconds) {
+      alert("Overlay end time exceeds video length.");
+      endSec = timelineWidthSeconds;
+    }
+    if (startSec >= timelineWidthSeconds) {
+      alert("Overlay start time exceeds video length.");
+      startSec = timelineWidthSeconds - 1;
+    }
 
     // Prevent duplicate overlay of same type, start, and end
     const duplicate = overlays.some(ov => ov.type === type && Math.round(ov.startSeconds) === Math.round(startSec) && Math.round(ov.endSeconds) === Math.round(endSec));
@@ -101,12 +111,12 @@ export default function Timeline({ timelineLength }) {
       return;
     }
     saveRecord("overlays",
-      ["startSeconds","endSeconds","type"],
-      [startSec, endSec, type]
+      ["startSeconds","endSeconds","type","videoID"],
+      [startSec, endSec, type, videoID]
     ).then(() => {
       // Fetch updated overlays from backend
       fetchTable("overlays").then(overlayRows => {
-        setOverlays(overlayRows.map(r => ({
+        setOverlays(overlayRows.filter(r => r.videoID === videoID).map(r => ({
           id: r.id,
           type: r.type,
           startSeconds: Number(r.startSeconds),
@@ -133,11 +143,11 @@ export default function Timeline({ timelineLength }) {
       alert("A marker of this type already exists at this time.");
       return;
     }
-    saveRecord("markers", ["seconds","type"], [seconds, selectedType])
+    saveRecord("markers", ["seconds","type","videoID"], [seconds, selectedType, videoID])
       .then(() => {
         // Fetch updated markers from backend
         fetchTable("markers").then(markerRows => {
-          setMarkers(markerRows.map(r => ({
+          setMarkers(markerRows.filter(r => r.videoID === videoID).map(r => ({
             id: r.id,
             seconds: Number(r.seconds),
             type: r.type
@@ -167,10 +177,10 @@ export default function Timeline({ timelineLength }) {
             return list;
           }
           // Only update backend and fetch if not duplicate
-          saveRecord("markers", ["id","seconds","type"], [moved.id, moved.seconds, moved.type])
+          saveRecord("markers", ["id","seconds","type","videoID"], [moved.id, moved.seconds, moved.type, videoID])
             .then(() => {
               fetchTable("markers").then(markerRows => {
-                setMarkers(markerRows.map(r => ({
+                setMarkers(markerRows.filter(r => r.videoID === videoID).map(r => ({
                   id: r.id,
                   seconds: Number(r.seconds),
                   type: r.type
@@ -188,10 +198,17 @@ export default function Timeline({ timelineLength }) {
           const width = ov.endSeconds - ov.startSeconds;
           let newStart = pxToSeconds(x - dragOverlay.offset);
           newStart = Math.max(0, Math.min(newStart, timelineWidthSeconds - width));
-          const newOv = { ...ov, startSeconds: newStart, endSeconds: newStart + width };
+          let newEnd = newStart + width;
+          // Prevent overlay from exceeding video length
+          if (newEnd > timelineWidthSeconds) {
+            alert("Overlay end time exceeds video length.");
+            newEnd = timelineWidthSeconds;
+            newStart = newEnd - width;
+          }
+          const newOv = { ...ov, startSeconds: newStart, endSeconds: newEnd };
           saveRecord("overlays",
-            ["id","startSeconds","endSeconds","type"],
-            [newOv.id,newOv.startSeconds,newOv.endSeconds,newOv.type]
+            ["id","startSeconds","endSeconds","type","videoID"],
+            [newOv.id,newOv.startSeconds,newOv.endSeconds,newOv.type,videoID]
           ).catch(err => console.error("Failed to save overlay", err));
           return newOv;
         });
@@ -205,10 +222,19 @@ export default function Timeline({ timelineLength }) {
           let newEnd = ov.endSeconds;
           if (resizeOverlay.edge === "left") newStart = Math.min(Math.max(pxToSeconds(x),0), ov.endSeconds-1);
           else if (resizeOverlay.edge === "right") newEnd = Math.max(pxToSeconds(x), ov.startSeconds+1);
+          // Prevent overlay from exceeding video length
+          if (newEnd > timelineWidthSeconds) {
+            alert("Overlay end time exceeds video length.");
+            newEnd = timelineWidthSeconds;
+          }
+          if (newStart >= timelineWidthSeconds) {
+            alert("Overlay start time exceeds video length.");
+            newStart = timelineWidthSeconds - 1;
+          }
           const newOv = { ...ov, startSeconds: newStart, endSeconds: newEnd };
           saveRecord("overlays",
-            ["id","startSeconds","endSeconds","type"],
-            [newOv.id,newOv.startSeconds,newOv.endSeconds,newOv.type]
+            ["id","startSeconds","endSeconds","type","videoID"],
+            [newOv.id,newOv.startSeconds,newOv.endSeconds,newOv.type,videoID]
           ).catch(err => console.error("Failed to save overlay", err));
           return newOv;
         });
