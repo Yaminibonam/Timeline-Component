@@ -1,0 +1,44 @@
+/* .App {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+
+.controls {
+  margin-bottom: 10px;
+}
+
+button {
+  margin-right: 10px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.react-calendar-timeline .rct-items .rct-item {
+  border-radius: 4px;
+  font-size: 12px;
+} */
+
+.App {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+
+.controls {
+  margin-bottom: 10px;
+}
+
+button {
+  margin-right: 10px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+/* Hide date row */
+.rct-dateHeader {
+  display: none;
+}
+
+/* Remove group title column */
+.rct-sidebar {
+  display: none !important;
+}

@@ -1,0 +1,10 @@
+/* small reset */
+html,body,#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  font-family: Inter, Arial, sans-serif;
+  background: #0f1724;
+  color: #dbeafe;
+}

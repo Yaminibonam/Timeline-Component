@@ -1,0 +1,205 @@
+/* Theme and layout */
+.page {
+  padding: 18px;
+  color: #cbd5e1;
+}
+.title {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  color: #e6eef8;
+}
+
+/* controls */
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.marker-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.type-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: transparent;
+  color: #dbeafe;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.type-btn .icon { font-size: 16px; }
+.type-btn .txt { font-size: 13px; opacity: 0.9; }
+.type-btn.active {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,0.12);
+}
+
+/* zoom */
+.zoom-controls {
+  margin-left: auto;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.zoom-controls button {
+  background:#071031;
+  color:#dbeafe;
+  border:1px solid rgba(255,255,255,0.06);
+  padding:6px 8px;
+  border-radius:6px;
+  cursor:pointer;
+}
+.zoom-value {
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.02);
+  border-radius:6px;
+  font-size:13px;
+}
+
+/* ruler wrapper gives the horizontal scrollbar */
+.ruler-wrapper {
+  border-radius: 8px;
+  background: linear-gradient(#0b1220, #091020);
+  padding: 14px;
+  margin-top: 8px;
+  overflow-x: auto;
+  overflow-y: visible;
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+/* the long ruler area */
+.ruler {
+  position: relative;
+  height: 120px;
+  min-height: 120px;
+}
+
+/* ticks */
+.ticks { position: absolute; left: 0; top: 8px; right: 0; bottom: 0; }
+.tick {
+  position: absolute;
+  top: 18px;
+  width: 1px;
+  height: 12px;
+  background: rgba(255,255,255,0.06);
+  transform: translateX(-0.5px);
+}
+.tick.major {
+  height: 28px;
+  background: rgba(255,255,255,0.12);
+}
+.tick .label {
+  position: absolute;
+  top: -18px;
+  left: -16px;
+  font-size: 11px;
+  color: #cbd5e1;
+  padding: 2px 6px;
+  background: transparent;
+}
+
+/* baseline small bar showing a darker track */
+.baseline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 14px;
+  background: linear-gradient(#2f3946, #222a36);
+  top: 70px;
+  border-radius: 6px;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.02);
+}
+
+/* markers layer sits above baseline */
+.markers-layer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: none; /* let marker children set pointer-events */
+}
+
+.marker {
+  position: absolute;
+  top: 46px;
+  pointer-events: auto;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.marker-pin {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 16px;
+  color: white;
+  box-shadow: 0 6px 16px rgba(10,10,20,0.5);
+  cursor: grab;
+}
+.marker-pin:active { cursor: grabbing; }
+
+.marker-time {
+  font-size: 12px;
+  background: rgba(0,0,0,0.4);
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: #e6eef8;
+}
+
+.hint {
+  margin-top: 12px;
+  color: #9fb2d6;
+  font-size: 13px;
+}
+
+.overlay {
+  transition: all 0.1s ease-out;
+  background-color: rgba(100, 100, 255, 0.2);
+  border-radius: 6px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  border: 2px solid transparent;
+  position: absolute;
+  cursor: grab;
+  overflow: hidden;
+}
+
+.overlay:hover {
+  border-color: #555;
+  background-color: rgba(100, 100, 255, 0.3);
+}
+
+.resize-handle {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.overlay-delete {
+  font-size: 12px;
+  padding: 2px;
+  background-color: white;
+  border-radius: 50%;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.overlay.chapter {
+  background-color: rgba(209, 146, 91, 0.92);
+}
+
+.overlay.autoplay {
+  background-color: rgba(100, 100, 255, 0.621);
+}
