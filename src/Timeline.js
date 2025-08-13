@@ -2,67 +2,68 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import "./Timeline.css";
 
 const MARKER_TYPES = {
-  ad: { color: "#1777ff", label: "Ad", icon: "📢" },
-  skip: { color: "#8b5cf6", label: "Skip", icon: "⏭️" },
+    ad: { color: "#1777ff", label: "Ad", icon: "📢" },
+    skip: { color: "#8b5cf6", label: "Skip", icon: "⏭️" },
 };
 
 const API_BASE = "http://138.68.140.83:8080/yaminib";
 
 // ----------------- API Helpers -----------------
 async function fetchTable(tableName) {
-  const res = await fetch(`${API_BASE}/getTableData.jsp?tableName=${tableName}`);
-  if (!res.ok) throw new Error(`Failed to fetch ${tableName}`);
-  const json = await res.json();
-  if (json.error) throw new Error(json.error);
-  if (!Array.isArray(json.columns) || !Array.isArray(json.data)) return [];
-
-  return json.data.map(row => {
-    const obj = {};
-    json.columns.forEach((colName, idx) => {
-      obj[colName] = row[idx];
+    const res = await fetch(`${API_BASE}/getTableData.jsp?tableName=${tableName}`);
+    if (!res.ok) throw new Error(`Failed to fetch ${tableName}`);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    if (!Array.isArray(json.columns) || !Array.isArray(json.data)) return [];
+    
+    return json.data.map(row => {
+        const obj = {};
+        json.columns.forEach((colName, idx) => {
+            obj[colName] = row[idx];
+        });
+        return obj;
     });
-    return obj;
-  });
 }
 
 async function saveRecord(tableName, columns, values) {
-  // Send columns[] and values[] as arrays, matching backend JSP requirements
-  const params = new URLSearchParams();
-  params.append("tableName", tableName);
-  columns.forEach(c => params.append("columns[]", c));
-  values.forEach(v => params.append("values[]", v));
-
-  const res = await fetch(`${API_BASE}/saveRecord.jsp`, {
-    method: "POST",
-    body: params
-  });
-  return res.json();
+    // Send columns[] and values[] as arrays, matching backend JSP requirements
+    const params = new URLSearchParams();
+    params.append("tableName", tableName);
+    columns.forEach(c => params.append("columns[]", c));
+    values.forEach(v => params.append("values[]", v));
+    
+    const res = await fetch(`${API_BASE}/saveRecord.jsp`, {
+        method: "POST",
+        body: params
+    });
+    return res.json();
 }
 
 async function deleteRecord(tableName, fieldName, fieldValue) {
-  const params = new URLSearchParams();
-  params.append("tableName", tableName);
-  params.append("fieldName", fieldName);
-  params.append("fieldValue", fieldValue);
-
-  const res = await fetch(`${API_BASE}/deleteRecord.jsp`, {
-    method: "POST",
-    body: params
-  });
-  return res.json();
+    const params = new URLSearchParams();
+    params.append("tableName", tableName);
+    params.append("fieldName", fieldName);
+    params.append("fieldValue", fieldValue);
+    
+    const res = await fetch(`${API_BASE}/deleteRecord.jsp`, {
+        method: "POST",
+        body: params
+    });
+    return res.json();
 }
 
 // ----------------- Helper Functions -----------------
 function secondsToMMSS(seconds) {
-  const s = Math.max(0, Math.floor(seconds));
-  const mm = Math.floor(s / 60);
-  const ss = s % 60;
-  return `${mm.toString().padStart(2, "0")}:${ss.toString().padStart(2, "0")}`;
+    const s = Math.max(0, Math.floor(seconds));
+    const mm = Math.floor(s / 60);
+    const ss = s % 60;
+    return `${mm.toString().padStart(2, "0")}:${ss.toString().padStart(2, "0")}`;
 }
 
 // ----------------- Timeline Component -----------------
-export default function Timeline() {
-  const timelineWidthSeconds = 60 * 60 * 12 * 4;
+export default function Timeline({ timelineLength }) {
+  // Use dynamic timeline length from prop
+  const timelineWidthSeconds = typeof timelineLength === 'number' ? timelineLength : 60 * 60 * 12 * 4;
   const timelineRef = useRef(null);
   const rulerRef = useRef(null);
 
