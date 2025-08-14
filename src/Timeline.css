@@ -170,18 +170,19 @@
 .overlay {
   z-index: 0;
   transition: all 0.1s ease-out;
-  background-color: rgba(100, 100, 255, 0.2);
+  background-color: rgba(100, 100, 255, 0.12); /* lighter overlay */
   border-radius: 6px;
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
-  border: 2px solid transparent;
+  border: 2px dashed #6a7cff;
   position: absolute;
   cursor: grab;
-  overflow: hidden;
+  overflow: visible;
+  pointer-events: auto;
 }
 
 .overlay:hover {
   border-color: #555;
-  background-color: rgba(100, 100, 255, 0.3);
+  background-color: rgba(100, 100, 255, 0.18);
 }
 
 .resize-handle {
@@ -198,9 +199,11 @@
 }
 
 .overlay.chapter {
-  background-color: rgba(216, 171, 132, 0.92);
+  background-color: rgba(216, 171, 132, 0.18);
+  border: 2px dashed #d8ab84;
 }
 
 .overlay.autoplay {
-  background-color: rgba(145, 145, 219, 0.621);
+  background-color: rgba(145, 145, 219, 0.18);
+  border: 2px dashed #9191db;
 }

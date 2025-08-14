@@ -1,52 +1,28 @@
-import React, { useState, useEffect } from "react";
 import TimelineComponent from "./Timeline";
-import { fetchTable } from "./api";
 
 function App() {
-  const [videos, setVideos] = useState([]);
-  const [selectedVideoID, setSelectedVideoID] = useState("");
-  const [timelineLength, setTimelineLength] = useState(0);
-
-  useEffect(() => {
-    fetchTable("video").then(rows => {
-      setVideos(rows);
-      if (rows.length > 0) {
-        setSelectedVideoID(rows[0].videoID);
-        setTimelineLength(Number(rows[0].timeInSeconds));
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    const video = videos.find(v => v.videoID === selectedVideoID);
-    if (video) {
-      setTimelineLength(Number(video.timeInSeconds));
-    }
-  }, [selectedVideoID, videos]);
+  // Static timeline data
+  const timelineLength = 1200;
+  
+  const markers = [
+    { id: 1, seconds: 120, type: "ad" },
+    { id: 2, seconds: 300, type: "skip" },
+    { id: 3, seconds: 600, type: "ad" }
+  ];
+  const overlays = [
+    { id: 1, type: "chapter", startSeconds: 0, endSeconds: 180, addedByForm: false },
+    { id: 2, type: "chapter", startSeconds: 181, endSeconds: 600, addedByForm: false },
+    { id: 3, type: "autoplay", startSeconds: 601, endSeconds: 900, addedByForm: false }
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <h1>My Timeline App</h1>
-      <div style={{ marginBottom: 16 }}>
-        <label>
-          Select Video:
-          <select
-            value={selectedVideoID}
-            onChange={e => setSelectedVideoID(e.target.value)}
-            style={{ marginLeft: 8, width: 220 }}
-          >
-            {videos.map(v => (
-              <option key={v.videoID} value={v.videoID}>
-                {v.URL} ({v.timeInSeconds}s)
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div style={{ flex: 1 }} />
-      {selectedVideoID && timelineLength > 0 && (
-        <TimelineComponent timelineLength={timelineLength} videoID={selectedVideoID} />
-      )}
+      <TimelineComponent
+        timelineLength={timelineLength}
+        markers={markers}
+        overlays={overlays}
+      />
     </div>
   );
 }
