@@ -265,7 +265,15 @@ export default function Timeline({ timelineLength, videoID }) {
   }, [onPointerMove, onPointerUp]);
 
   // ----------------- Zoom & Delete -----------------
-  const zoomIn = () => setPixelsPerSecond(p => Math.min(p*1.6, 5));
+  // Limit zoom in so that 1 second fills the screen width at maximum
+  const zoomIn = () => {
+    if (typeof window !== 'undefined') {
+      const screenWidth = window.innerWidth - 64;
+      setPixelsPerSecond(p => Math.min(p * 1.6, screenWidth));
+    } else {
+      setPixelsPerSecond(p => Math.min(p * 1.6, 5));
+    }
+  };
   const zoomOut = () => {
     const minPPS = getMinPixelsPerSecond();
     setPixelsPerSecond(p => Math.max(p/1.6, minPPS));
